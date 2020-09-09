@@ -2,7 +2,7 @@
     <#
 	.SYNOPSIS
 	This function will set which functions are run on the remote machine. 
-
+     
 	.DESCRIPTION
 	A bit more description 
 

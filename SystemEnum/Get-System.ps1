@@ -2,7 +2,7 @@
     <#
 	.SYNOPSIS
 	This function enumerates system information
-		
+		 
 	.DESCRIPTION
 	This function enumerates system information. 
     The results are then output to a file.  

@@ -1,7 +1,7 @@
 ﻿function Get-LinuxSystem {
 	<#
 	.SYNOPSIS
-	This function ...
+	This function ... 
 
 	.DESCRIPTION
 	A bit more description
