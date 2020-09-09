@@ -59,7 +59,7 @@
 }
 
 #set the list of ips
-#$ipList = "192.168.159.129"
+#$ipList = "192.xxx.xxx.xxx"
 #or set the list of ips
 #$ipList = gc "d:\ips.txt"
 #run the function
