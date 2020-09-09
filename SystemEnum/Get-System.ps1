@@ -5,46 +5,30 @@
 		 
 	.DESCRIPTION
 	This function enumerates system information. 
-    The results are then output to a file.  
-    The function takes a list of computers (ips) to enumerate, and a list 
-    detailing which information you require of the system. 
+        The results are then output to a file.  
+        The function takes a list of computers (ips) to enumerate, and a list 
+        detailing which information you require of the system. 
 
-    The results are then output to a text document
+        The results are then output to a text document
 
-    #### future functionality ####
-    - working on format to output for json, to be ingested in to siem. 
+        #### future functionality ####
+        - working on format to output for json, to be ingested in to siem. 
 
 	.PARAMETER ipList
 	ip - an ip addresses, for the system that is to be enumerated; 
 
-    "10.10.10.15"
+        "10.10.10.15"
 	
-    Will be used to enumerate remote system, or identify local system that was enumerated.  
+        Will be used to enumerate remote system, or identify local system that was enumerated.  
 
-    .PARAMETER functionOptionList
+    	.PARAMETER functionOptionList
     
-    A list of the information that you require from the system. 
-    Choose any/all from the following list, paste in to txt document and save.
-
-    systemLocalUser 
-    systemLocalGroups 
-    systemStartup 
-    systemInformation 
-    systemNetstat 
-    systemProcesses 
-    systemRoute
-    systemSessions 
-    systemService 
-    systemPwhHistory 
-    systemTemp 
-    systemWinTemp 
-    systemLogicalDisk
-    systemScheduledTasks
+    	A list of the information that you require from the system. 
 
 	.EXAMPLE
 	Get-System -ipList "192.168.1.1" -functionOptionList "c:\function_option_list.txt"
 
-    Manually listing the ip and path to the switch options
+    	Manually listing the ip and path to the switch options
 
 	#>
 
