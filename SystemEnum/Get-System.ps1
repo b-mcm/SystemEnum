@@ -347,5 +347,5 @@
 
 
 if ($loadingModule) {
-	Export-ModuleMember -Function 'Get-System'
+    Export-ModuleMember -Function 'Get-System'
 }
