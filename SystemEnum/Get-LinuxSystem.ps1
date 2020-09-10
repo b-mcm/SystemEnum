@@ -1,10 +1,15 @@
 ﻿function Get-LinuxSystem {
 	<#
 	.SYNOPSIS
-	This function ... 
+	This function enumerates remote linux system information. This requires ssh to be running on the remote machine.
+
+	Future functionality would be to use keys so passwords did not have to be entered. 
 
 	.DESCRIPTION
-	A bit more description
+	Creates a remote ssh session with a linux machine.
+	Runs a list of bash commands. 
+	Reads the output. Creates a txt file with the stream output. 
+	More functions can be added. 
 
 	.PARAMETER ip
 	A single list or array of ips 
@@ -37,8 +42,10 @@
 	)
 
 	begin {
-		#run the following once
-		
+		#Requires posh ssh for functionality. Running this line requires
+		#running the script as admin. Can comment out and run in separate ps
+		#window. 
+		#install-module -name Posh-SSH
 		#set the credentials
 		$creds = Get-Credential
 		#set the username
@@ -151,16 +158,19 @@
 	}
 	#run at the end
 	end {
-		
-		$sreturn | Out-File "C:\linux2.txt" -Encoding utf8
+		#write the returned results to a file, specified in the function parameter outFile
+		$sreturn | Out-File $outFile -Encoding utf8
+		#Output to screen that the function has completed running
 		Write-host "Linux system enum for ip [$ip] is complete" -ForegroundColor Green
+		#Output to screen the path of the saved result file. 
 		Wtite-host "Results have been saved to $outFile"
-
-
+		#Get the sessions, and remove the sessions. This should be commented out if you still require
+		#SSH sessions. 
 		(Get-SSHSession).SessionId | ForEach-Object { Remove-SSHSession -SessionId $_ }
 	}
 }
-
+#Load the module, so command is available in powershell. Can be commented out if you do not wish to import 
+#module to powershell. You will have to reference the file using path, or copy paste the function. 
 if ($loadingModule) {
 	Export-ModuleMember -Function 'Get-LinuxSystem'
 }

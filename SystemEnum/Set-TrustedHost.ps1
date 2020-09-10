@@ -4,7 +4,7 @@
 	This function checks the trusted hosts file for current values. 
 	It then takes a list of ips, and checks if these are in the current
 	trusted hosts.  
-	If the ips are not in the trusted hosts, the ips are added to the trusted
+	If the ips are not in the trusted hosts, the ips are added to the trusted 
 	hosts list.
 	 
 	.DESCRIPTION

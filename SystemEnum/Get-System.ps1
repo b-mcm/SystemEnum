@@ -1,34 +1,34 @@
 ﻿function Get-System {
     <#
 	.SYNOPSIS
-	This function enumerates system information
+	
+    This function enumerates system information
 		 
 	.DESCRIPTION
-	This function enumerates system information. 
-        The results are then output to a file.  
-        The function takes a list of computers (ips) to enumerate, and a list 
-        detailing which information you require of the system. 
-
-        The results are then output to a text document
-
-        #### future functionality ####
-        - working on format to output for json, to be ingested in to siem. 
+	
+    This function enumerates system information. 
+    The results are then output to a file.  
+    The function takes a list of computers (ips) to enumerate, and a list 
+    detailing which information you require of the system. 
+    The results are then output to a text document
+    #### future functionality ####
+    - working on format to output for json, to be ingested in to siem. 
 
 	.PARAMETER ipList
-	ip - an ip addresses, for the system that is to be enumerated; 
-
-        "10.10.10.15"
 	
-        Will be used to enumerate remote system, or identify local system that was enumerated.  
+    ip - an ip addresses, for the system that is to be enumerated; 
+    "10.10.10.15"
+	Will be used to enumerate remote system, or identify local system that was enumerated.  
 
-    	.PARAMETER functionOptionList
+    .PARAMETER functionOptionList
     
-    	A list of the information that you require from the system. 
+    A list of the information that you require from the system. 
 
 	.EXAMPLE
-	Get-System -ipList "192.168.1.1" -functionOptionList "c:\function_option_list.txt"
-
-    	Manually listing the ip and path to the switch options
+	
+    Get-System -ipList "192.168.1.1" -functionOptionList "c:\function_option_list.txt"
+    
+    Manually listing the ip and path to the switch options
 
 	#>
 
@@ -328,8 +328,8 @@
     END {
     }
 }		
-
-
+#Load the module, so command is available in powershell. Can be commented out if you do not wish to import 
+#module to powershell. You will have to reference the file using path, or copy paste the function. 
 if ($loadingModule) {
     Export-ModuleMember -Function 'Get-System'
 }
