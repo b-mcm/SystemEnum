@@ -37,7 +37,7 @@
             ValueFromPipeline = $false)]
         [String[]]$ip,
 
-        [Parameter(Mandatory = $true,
+        [Parameter(Mandatory = $false,
             ValueFromPipeline = $false)]
         [String]$functionOptionList
 
@@ -46,8 +46,10 @@
 
     #The BEGIN block runs once, before the first item in the collection. 
     BEGIN {
+        #results array
+        [System.Collections.ArrayList]$results = @()
         #if the function option list is empty
-        if ($null -eq $functionOptionList) {
+        if ($functionOptionList.Length -eq 0) {
             #set the function to run all system enumeration information
             $switchOptions = 
             "systemLocalUser", 
@@ -56,14 +58,13 @@
             "systemInformation", 
             "systemNetstat", 
             "systemProcesses", 
-            "systemRoute", 
-            "systemnUsers", 
+            "systemRoute",  
             "systemSessions", 
             "systemService", 
             "systemPwhHistory", 
             "systemTemp", 
             "systemWinTemp", 
-            "systemLogicalDisk"
+            "systemLogicalDisk",
             "systemScheduledTasks"
         }
         #if the path is supplied, get the switch options from the txt file
@@ -75,6 +76,7 @@
     PROCESS {
 
         function systemLocalUser {
+            write-host "systemlocaluser is running"
             Set-Variable -Name PSversionU -Value $null
             $PSversionU = ((Get-Host).Version).Major
             if ($PSversionU -gt 2) {
@@ -96,6 +98,7 @@
         }
 
         function systemLocalGroups {
+            write-host "systemlocalgroups is running"
             $PSversionG = ((Get-Host).Version).Major
             IF ($PSversionG -gt 2) {
                 $LocalGroup = (Get-LocalGroup).Name
@@ -109,6 +112,7 @@
         }
 
         function systemStartup {
+            write-host "systemstartup is running"
             $startupLocationsNames = (Get-Wmiobject Win32_startupcommand |  
                 Select-Object Name, @{label = "command"; expression = { $_.Command } },
                 @{label = "Location"; expression = { $_.Location } },
@@ -131,24 +135,40 @@
             $startupTable
         }
 
-        function systemInformation { systeminfo | out-string }
+        function systemInformation { 
+            write-host "systemInformation is running"
+            systeminfo | out-string 
+        }
 
-        function systemNetstat { netstat -natob | out-string }
+        function systemNetstat { 
+            write-host "systemNetstat is running"
+            netstat -natob | out-string 
+        }
  
-        function systemProcess { Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | ft -AutoSize -Wrap | out-string }
+        function systemProcess { 
+            write-host "systemProcess is running"
+            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | ft -AutoSize -Wrap | out-string 
+        }
  
-        function systemRoute { route print | out-string }
+        function systemRoute { 
+            write-host "systemRoute is running"
+            route print | out-string 
+        }
  
-        function systemSessions { net sessions | out-string }
+        function systemSessions { 
+            write-host "systemSessions is running"
+            net sessions | out-string 
+        }
  
         function systemService {
+            write-host "systemService is running"
             get-service | 
             where-object { $_.Status -eq "Running" } |
             out-string
         }
 
         function systemPwhHistory {
- 
+            write-host "systemPwhHistory is running"
             $histPath = Split-Path -Path (Get-PSReadlineOption).HistorySavePath
             $histtxt = (Get-ChildItem $histPath).Name
             $count = $histtxt.count
@@ -179,11 +199,18 @@
 
         }
  
-        function systemTemp { cmd /c "dir %TEMP% /b /s /a-d" | out-string }
+        function systemTemp { 
+            write-host "systemTemp is running"
+            cmd /c "dir %TEMP% /b /s /a-d" | out-string 
+        }
  
-        function systemWinTemp { cmd /c "dir C:\Windows\Temp /b /s /a-d" | out-string }
+        function systemWinTemp { 
+            write-host "systemWinTemp is running"
+            cmd /c "dir C:\Windows\Temp /b /s /a-d" | out-string 
+        }
  
         function systemLogicalDisk {
+            write-host "systemLogicalDisk is running"
 
             $gbFreeSpace = @{Name = "Free Space (GB)"; Expression = { [math]::round($_.freespace / 1GB, 2) } }
 
@@ -215,6 +242,7 @@
         }
 
         function systemScheduledTasks {
+            write-host "systemScheduledTasks is running"
             Get-ScheduledTask  |
             Select-Object -Property TaskName, State -ExpandProperty Actions |
             select-object @{label = "Task"; expression = { $_.TaskName } },
@@ -327,9 +355,4 @@
     #The END block also runs once, after every item in the collection has been processes
     END {
     }
-}		
-#Load the module, so command is available in powershell. Can be commented out if you do not wish to import 
-#module to powershell. You will have to reference the file using path, or copy paste the function. 
-if ($loadingModule) {
-    Export-ModuleMember -Function 'Get-System'
 }

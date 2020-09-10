@@ -42,7 +42,7 @@
 	)
 
 	begin {
-		#Requires posh ssh for functionality. Running this line requires
+		#Function Requires posh ssh for functionality. Running this line requires
 		#running the script as admin. Can comment out and run in separate ps
 		#window. 
 		#install-module -name Posh-SSH
