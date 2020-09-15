@@ -20,13 +20,13 @@
     "10.10.10.15"
 	Will be used to enumerate remote system, or identify local system that was enumerated.  
 
-    .PARAMETER functionOptionList
+    .PARAMETER functionOptionListPath
     
-    A list of the information that you require from the system. 
+    A path to a list of the names of the functions that you wish to run. 
 
 	.EXAMPLE
 	
-    Get-System -ipList "192.168.1.1" -functionOptionList "c:\function_option_list.txt"
+    Get-System -ipList "192.168.1.1" -functionOptionListPath "c:\function_option_list.txt"
     
     Manually listing the ip and path to the switch options
 
@@ -34,22 +34,28 @@
 
     param(
         [Parameter(Mandatory = $true,
-            ValueFromPipeline = $false)]
+            ValueFromPipeline = $false,
+            Position = 0)]
         [String[]]$ip,
 
         [Parameter(Mandatory = $false,
+            ValueFromPipeline = $false,
+            Position = 1)]
+        [String[]]$switchOptions,
+
+        [Parameter(Mandatory = $false,
             ValueFromPipeline = $false)]
-        [String]$functionOptionList
-
-
+        [String]$functionOptionListPath
     )
 
     #The BEGIN block runs once, before the first item in the collection. 
     BEGIN {
         #results array
         [System.Collections.ArrayList]$results = @()
-        #if the function option list is empty
-        if ($functionOptionList.Length -eq 0) {
+        $systemPSversion = ($PSVersionTable.PSVersion.Major | Out-String).trim()
+        #if the function option list is empty and not path is supplied
+        <#
+        if (($functionOptionListPath.Length -eq 0) -and ($switchOptions.Length -eq 0) ) {
             #set the function to run all system enumeration information
             $switchOptions = 
             "systemLocalUser", 
@@ -66,48 +72,74 @@
             "systemWinTemp", 
             "systemLogicalDisk",
             "systemScheduledTasks"
-        }
+        } 
         #if the path is supplied, get the switch options from the txt file
-        else {
-            $switchOptions = Get-Content $functionOptionList
+        elseif ($functionOptionListPath.Length -ne 0) {
+            $switchOptions = Get-Content $functionOptionListPath
         }
+        #>
     }
     #The PROCESS block runs once for each item in the collection
     PROCESS {
 
         function systemLocalUser {
             write-host "systemlocaluser is running"
-            Set-Variable -Name PSversionU -Value $null
-            $PSversionU = ((Get-Host).Version).Major
-            if ($PSversionU -gt 2) {
-                Get-LocalUser | 
-                Where-Object { $_.Enabled -eq $true } |
-                Select-Object @{label = "ip"; expression = { $ip } },
-                Name, @{label  = "Enabled?";
-                    expression = { if ($_.Enabled -eq $true) { "Enabled" }
+              
+            if ($systemPSversion -gt 2) {
+                Get-LocalUser | Where { $_.Enabled -eq $true } | 
+                Select-Object @{label = "ip"; expression = { $ip } }, Name, 
+                @{label = "Enabled?"; expression = { 
+                        if ($_.Enabled -eq $true) { "Enabled" }
                         else {
                             "Disabled"
                         }
-                    }
-                } |
-                Out-String
-            }
-            else {
-                wmic useraccount list brief | Out-String
+                    } 
+                }  
+            } 
+    
+            if ($systemPSversion -le 2) {
+            
+                $systemLocalUserWmic = wmic useraccount get Name, Domain, LocalAccount, Status -format:list | where { $_ -ne "" }
+            
+                $i = 0
+                $length = $systemLocalUserWmic.Count
+
+                $localWmicOut = 
+                while ($i -lt $length) {
+                    $name = $systemLocalUserWmic[($i + 2)].split("=")[1]
+                    $domain = $systemLocalUserWmic[$i].split("=")[1]
+                    $AccountType = $systemLocalUserWmic[($i + 1)]
+                    $status = $systemLocalUserWmic[($i + 3)].split("=")[1]
+                    $i = ($i + 4)  
+
+                    "$name $domain $accounttype $status"
+
+                }
+
+
+                foreach ($v in $localWmicOut) {
+                    $line = $v.Split(" ")
+                    $typeTest = if ($line[2].split("=")[1] -eq "TRUE") { "Local" }
+                    else { "Other account" } 
+                    $v | select @{Label = "Name"; Expression = { $v.Split(" ")[0] } },
+                    @{Label = "Domain"; Expression = { $line[1] } },
+                    @{Label = "AccountType"; Expression = { $typeTest } },
+                    @{Label = "Status"; Expression = { $line[3] } }
+                }
             }
         }
 
         function systemLocalGroups {
             write-host "systemlocalgroups is running"
-            $PSversionG = ((Get-Host).Version).Major
-            IF ($PSversionG -gt 2) {
+            #$PSversionG = ((Get-Host).Version).Major
+            if ($systemPSversion -gt 2) {
                 $LocalGroup = (Get-LocalGroup).Name
                 $LocalGroup | % {
                     Get-LocalGroupMember -Group $_
-                } | Out-String
+                } 
             }
-            ELSE {
-                wmic path win32_groupuser | out-string
+            else {
+                wmic path win32_groupuser 
             }
         }
 
@@ -135,37 +167,67 @@
             $startupTable
         }
 
+        #used for json output
+        function systemStartupJson {
+            write-host "systemstartup is running"
+            Get-Wmiobject Win32_startupcommand |  
+            Select-Object Name, @{label = "command"; expression = { $_.Command } },
+            @{label = "Location"; expression = { $_.Location } },
+            @{label = "User"; expression = { $_.User } }
+
+        }
+
         function systemInformation { 
             write-host "systemInformation is running"
-            systeminfo | out-string 
+            systeminfo | out-string
         }
+
+        #used for json output
+        function systemInformationJson {
+            write-host "systemInformation is running"
+            systeminfo -fo:csv
+        }
+        
 
         function systemNetstat { 
             write-host "systemNetstat is running"
-            netstat -natob | out-string 
+            netstat -natob  
         }
  
         function systemProcess { 
             write-host "systemProcess is running"
-            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | ft -AutoSize -Wrap | out-string 
+            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | ft -AutoSize -Wrap  
+        }
+
+        #used for json output 
+        function systemProcessJson {
+            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine
         }
  
         function systemRoute { 
             write-host "systemRoute is running"
-            route print | out-string 
+            route print  
         }
  
         function systemSessions { 
             write-host "systemSessions is running"
-            net sessions | out-string 
+            net sessions  
         }
  
         function systemService {
             write-host "systemService is running"
             get-service | 
-            where-object { $_.Status -eq "Running" } |
-            out-string
+            where-object { $_.Status -eq "Running" } 
         }
+
+        #for use with json output
+        <#
+        function systemServiceJson {
+            write-host "systemService is running"
+            get-service |
+            #remove this line if require services that are not running
+            where-object { $_.Status -eq "Running" } 
+        } #>
 
         function systemPwhHistory {
             write-host "systemPwhHistory is running"
@@ -185,7 +247,7 @@
                     #$currentFilePath
                     #get the content of the current file
                     "`n ######## History from the file $txtfile ########"
-                    Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } | Out-String
+                    Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
         
                 } 
             }
@@ -194,19 +256,52 @@
                 #set the file path
                 $currentFilePath = $histPath + "\" + $histtxt
                 #get the content from the file
-                Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } | Out-String
+                Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
             }
 
         }
+
+        #for use with json output. Had to remove headings to get rid of blank lines
+        function systemPwhHistoryJson {
+            write-host "systemPwhHistory is running"
+            $histPath = Split-Path -Path (Get-PSReadlineOption).HistorySavePath
+            $histtxt = (Get-ChildItem $histPath).Name
+            $count = $histtxt.count
+
+            if ($count -gt 1) { 
+                #"the count of histtxt is greater than 1"
+                #take each of the file names that are returned
+                foreach ($txtfile in $histtxt) {
+                    #show the file name that is being returned each loop
+                    #"the file name in current loop is $txtfile"
+                    #set the path for the current file
+                    $currentFilePath = $histPath + "\" + $txtfile
+                    #show the path set for the current file
+                    #$currentFilePath
+                    #get the content of the current file
+                    Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
+        
+                } 
+            }
+            #if there is just one file
+            else {
+                #set the file path
+                $currentFilePath = $histPath + "\" + $histtxt
+                #get the content from the file
+                Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
+            }
+
+        }
+
  
         function systemTemp { 
             write-host "systemTemp is running"
-            cmd /c "dir %TEMP% /b /s /a-d" | out-string 
+            cmd /c "dir %TEMP% /b /s /a-d"  
         }
  
         function systemWinTemp { 
             write-host "systemWinTemp is running"
-            cmd /c "dir C:\Windows\Temp /b /s /a-d" | out-string 
+            cmd /c "dir C:\Windows\Temp /b /s /a-d"  
         }
  
         function systemLogicalDisk {
@@ -238,7 +333,39 @@
 
             Get-CimInstance Win32_LogicalDisk | 
             Select-Object DeviceID, $gbFreeSpace, $gbSize, FileSystem, VolumeName, $DriveType | 
-            Format-Table -AutoSize | Out-String 
+            Format-Table -AutoSize  
+        }
+
+        #used for json output. removed formatting to use properties
+        function systemLogicalDiskJson {
+            write-host "systemLogicalDisk is running"
+
+            $gbFreeSpace = @{Name = "Free Space (GB)"; Expression = { [math]::round($_.freespace / 1GB, 2) } }
+
+            $gbSize = @{Name = "Size (GB)"; Expression = { [math]::round($_.size / 1GB, 2) } }
+
+            $DriveType = @{
+                Name       = 'DriveType'
+                Expression = {
+                    # property is an array, so process all values
+                    $value = $_.DriveType
+    
+                    switch ([int]$value) {
+                        0 { 'Unknown' }
+                        1 { 'No Root Directory' }
+                        2 { 'Removable Disk' }
+                        3 { 'Local Disk' }
+                        4 { 'Network Drive' }
+                        5 { 'Compact Disc' }
+                        6 { 'RAM Disk' }
+                        default { "$value" }
+                    }
+      
+                }  
+            }
+
+            Get-CimInstance Win32_LogicalDisk | 
+            Select-Object DeviceID, $gbFreeSpace, $gbSize, FileSystem, VolumeName, $DriveType
         }
 
         function systemScheduledTasks {
@@ -248,7 +375,18 @@
             select-object @{label = "Task"; expression = { $_.TaskName } },
             @{label = "State"; expression = { $_.State } },
             @{label = "Execute file"; expression = { $_.Execute } } | 
-            Sort-Object State | Format-Table -AutoSize | Out-String 
+            Sort-Object State | Format-Table -AutoSize  
+        }
+
+        #use for json output. remove the formatting to access properties
+        function systemScheduledTasksJson {
+            write-host "systemScheduledTasks is running"
+            Get-ScheduledTask  |
+            Select-Object -Property TaskName, State -ExpandProperty Actions |
+            select-object @{label = "Task"; expression = { $_.TaskName } },
+            @{label = "State"; expression = { $_.State } },
+            @{label = "Execute file"; expression = { $_.Execute } } | 
+            Sort-Object State
         }
 
         ######################################################### Header ##########################################################################
@@ -343,16 +481,22 @@
             Write-host "Complete with" -NoNewline
             Write-host " [$resCount] " -foregroundcolor Red -NoNewline 
             Write-host "results."
+            $swCount = $switchOptions.Count
             "No systems were enumerated."
-            "Please check for errors if results should be returned"
+            "Please check for errors if results should be returned. The most common error is empty variable switchoptions"
+            "The count of switchoptions is $swCount"
         }
 
         else {
-            "There are $resCount results."
+            #"There are $resCount results."
             $results
         }
     }
     #The END block also runs once, after every item in the collection has been processes
     END {
     }
+}
+
+if ($loadingModule) {
+    Export-ModuleMember -Function 'Get-System'
 }

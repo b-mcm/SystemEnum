@@ -147,13 +147,15 @@
 			#show the progress and the command runmning
 			Write-Progress -Activity "Command [$($command)]" -Status "Command $i of $($commandArray.Count)" -PercentComplete (($i / $commandArray.Count) * 100) 
 			#read the stream
-			$sReturn = $stream.Read()
+			#$sReturn = $stream.Read()
 			#write the current command to the console
 			$stream.WriteLine($command)
 			#wait for command to execute
 			Start-Sleep -s 2
 			#save the output of the command in the stream to the variable
 			$sReturn = $sReturn += $stream.Read()
+			#increment the Count
+			$i++
 		}
 	}
 	#run at the end
@@ -163,7 +165,7 @@
 		#Output to screen that the function has completed running
 		Write-host "Linux system enum for ip [$ip] is complete" -ForegroundColor Green
 		#Output to screen the path of the saved result file. 
-		Wtite-host "Results have been saved to $outFile"
+		Write-host "Results have been saved to $outFile"
 		#Get the sessions, and remove the sessions. This should be commented out if you still require
 		#SSH sessions. 
 		(Get-SSHSession).SessionId | ForEach-Object { Remove-SSHSession -SessionId $_ }

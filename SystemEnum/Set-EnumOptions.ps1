@@ -26,33 +26,37 @@
         #set the built options to be empty
         $switchChoices = $null
         #load the list of options
-        $testList = "1.  systemLocalUsers", 
-        "2.  systemLocalGroups", 
-        "3.  systemStartup",
-        "4.  systemInformation", 
-        "5.  systemNetstat", 
-        "6.  systemProcesses", 
-        "7.  systemRoute", 
-        "8.  systemnUsers", 
-        "9.  systemSessions", 
-        "10. systemService", 
-        "11. systemPwhHistory", 
-        "12. systemTemp", 
-        "13. systemWinTemp", 
-        "14. systemLogicalDisk",
-        "15. systemScheduledTasks"
-        #set the name for the output. This will be input to the switch function in Get-System.
         $allOptions = 
-        foreach ($opt in $testList) {
-            $opt.split(" ")[-1]
+        "systemLocalUser", 
+        "systemLocalGroups", 
+        "systemStartup",
+        "systemInformation", 
+        "systemNetstat", 
+        "systemProcesses", 
+        "systemRoute",
+        "systemSessions", 
+        "systemService", 
+        "systemPwhHistory", 
+        "systemTemp", 
+        "systemWinTemp", 
+        "systemLogicalDisk",
+        "systemScheduledTasks"
+        #create the menu items from the current list of functions (start at list number 1)
+        $listNum = 1        
+        [System.Collections.ArrayList]$testList = @()
+        foreach ($opt in $allOptions) {
+            [void]$testList.Add("$listNum. $opt")
+            $listNum++
         }
     }
     #display the menu
     process {
-        "`n ######## SYSTEM ENUMERATION OPTIONS ######## `n"
-        $testList
-        "`n ####################################"
-        "`n"
+        Write-host "`n ######## SYSTEM ENUMERATION OPTIONS ######## `n"
+        foreach ($opt in $testList) {
+            Write-host $opt
+        }
+        write-host "`n ####################################"
+        Write-host "`n"
         #Ask user if chosen options will be included or excluded in system enumeration
         function includeExcludeChoice {
             #The user chosen options will be included in the output,
@@ -89,7 +93,7 @@
             #For each of the options in the full list
             foreach ($a in $allOptions) {
                 #add to the output list
-                $switchOptions.Add($a) > $null
+                [void]$switchOptions.Add($a)
             }
             #return the final list of function names to be run
             return $switchOptions
@@ -108,7 +112,7 @@
                 #Minus 1 from the value, as array index begins at 0
                 $cIndex = $choice - 1
                 #Add the option using the array index to a new array
-                $switchOptions.Add($allOptions[$cIndex]) > $null
+                [void]$switchOptions.Add($allOptions[$cIndex])
             }
             #Return the final array with all the options the user has listed
             return $switchOptions
@@ -132,7 +136,7 @@
                 #Minus 1 from the values, as index starts counting at 0
                 $cIndex = $choice - 1
                 #Add each option using the given index values
-                $switchOptions.Add($allOptions[$cIndex]) > $null
+                [void]$switchOptions.Add($allOptions[$cIndex])
             }
             #return the completed array with functions to run
             return $switchOptions
@@ -149,7 +153,7 @@
     end {
         #Return the array of switch options. This is a list of functions, that will be used in
         #Get-System switch section. 
-        return $switchOptions
+        
     }
 }
 #Load the module, so command is available in powershell. Can be commented out if you do not wish to import 
