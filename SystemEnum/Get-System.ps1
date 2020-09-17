@@ -53,31 +53,6 @@
         #results array
         [System.Collections.ArrayList]$results = @()
         $systemPSversion = ($PSVersionTable.PSVersion.Major | Out-String).trim()
-        #if the function option list is empty and not path is supplied
-        <#
-        if (($functionOptionListPath.Length -eq 0) -and ($switchOptions.Length -eq 0) ) {
-            #set the function to run all system enumeration information
-            $switchOptions = 
-            "systemLocalUser", 
-            "systemLocalGroups", 
-            "systemStartup",
-            "systemInformation", 
-            "systemNetstat", 
-            "systemProcesses", 
-            "systemRoute",  
-            "systemSessions", 
-            "systemService", 
-            "systemPwhHistory", 
-            "systemTemp", 
-            "systemWinTemp", 
-            "systemLogicalDisk",
-            "systemScheduledTasks"
-        } 
-        #if the path is supplied, get the switch options from the txt file
-        elseif ($functionOptionListPath.Length -ne 0) {
-            $switchOptions = Get-Content $functionOptionListPath
-        }
-        #>
     }
     #The PROCESS block runs once for each item in the collection
     PROCESS {
@@ -491,9 +466,12 @@
             #"There are $resCount results."
             $results
         }
+
+        $outputNDJson = export-ndjson
     }
     #The END block also runs once, after every item in the collection has been processes
     END {
+    return $outputNDJson
     }
 }
 

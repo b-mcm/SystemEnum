@@ -19,45 +19,219 @@
 
 	#>
 
-	<# Enable -Confirm and -WhatIf. 
-	[CmdletBinding(SupportsShouldProcess = $true)]
 	param(
-		[Parameter(
-			Mandatory = $true,
-			Position = 0,
+		[Parameter(Mandatory = $true,
 			ValueFromPipeline = $false,
-			ValueFromPipelinebyPropertyName = $true,
-			ValueFromRemainingArguments = $true
-		)]
-		[ValidateNotNullOrEmpty()]
-		[string[]] $FromPipeline
+			Position = 0)]
+		[String[]]$ip
 	)
-	#>
+
 
 	begin {
 		#set the results array. Use this type of array, so can add to array
 		#using the fixed list array requires multiple copies of the array be 
 		#stored. This does not require multiple copies to add to the array
-		[System.Collections.ArrayList]$results = @()
+		[System.Collections.ArrayList]$ndjsonresults = @()
 		#set a temporary array to compile the data for each function
 		[System.Collections.ArrayList]$tempArray = @()
 	}
 
 	process {
+
+		#### set all functions ###
+
+		function systemLocalUser {
+			write-host "systemlocaluser is running"
+              
+			if ($systemPSversion -gt 2) {
+				Get-LocalUser | Where-Object { $_.Enabled -eq $true } | 
+				Select-Object @{label = "ip"; expression = { $ip } }, Name, 
+				@{label = "Enabled?"; expression = { 
+						if ($_.Enabled -eq $true) { "Enabled" }
+						else {
+							"Disabled"
+						}
+					} 
+				}  
+			} 
+    
+			if ($systemPSversion -le 2) {
+            
+				$systemLocalUserWmic = wmic useraccount get Name, Domain, LocalAccount, Status -format:list | Where-Object { $_ -ne "" }
+            
+				$i = 0
+				$length = $systemLocalUserWmic.Count
+
+				$localWmicOut = 
+				while ($i -lt $length) {
+					$name = $systemLocalUserWmic[($i + 2)].split("=")[1]
+					$domain = $systemLocalUserWmic[$i].split("=")[1]
+					$AccountType = $systemLocalUserWmic[($i + 1)]
+					$status = $systemLocalUserWmic[($i + 3)].split("=")[1]
+					$i = ($i + 4)  
+
+					"$name $domain $accounttype $status"
+
+				}
+
+
+				foreach ($v in $localWmicOut) {
+					$line = $v.Split(" ")
+					$typeTest = if ($line[2].split("=")[1] -eq "TRUE") { "Local" }
+					else { "Other account" } 
+					$v | Select-Object @{Label = "Name"; Expression = { $v.Split(" ")[0] } },
+					@{Label = "Domain"; Expression = { $line[1] } },
+					@{Label = "AccountType"; Expression = { $typeTest } },
+					@{Label = "Status"; Expression = { $line[3] } }
+				}
+			}
+		}
+
+		function systemLocalGroups {
+			write-host "systemlocalgroups is running"
+			#$PSversionG = ((Get-Host).Version).Major
+			if ($systemPSversion -gt 2) {
+				$LocalGroup = (Get-LocalGroup).Name
+				$LocalGroup | ForEach-Object {
+					Get-LocalGroupMember -Group $_
+				} 
+			}
+			else {
+				wmic path win32_groupuser 
+			}
+		}
+
+		#used for json output
+		function systemStartupJson {
+			write-host "systemstartup is running"
+			Get-Wmiobject Win32_startupcommand |  
+			Select-Object Name, @{label = "command"; expression = { $_.Command } },
+			@{label = "Location"; expression = { $_.Location } },
+			@{label = "User"; expression = { $_.User } }
+
+		}
+
+		#used for json output
+		function systemInformationJson {
+			write-host "systemInformation is running"
+			systeminfo -fo:csv
+		}
+        
+
+ 
+		function systemProcessJson { 
+			write-host "systemProcess is running"
+			Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine 
+		}
+
+		function systemService {
+			write-host "systemService is running"
+			get-service | 
+			where-object { $_.Status -eq "Running" } 
+		}
+
+		#for use with json output. Had to remove headings to get rid of blank lines
+		function systemPwhHistoryJson {
+			write-host "systemPwhHistory is running"
+			$histPath = Split-Path -Path (Get-PSReadlineOption).HistorySavePath
+			$histtxt = (Get-ChildItem $histPath).Name
+			$count = $histtxt.count
+
+			if ($count -gt 1) { 
+				#"the count of histtxt is greater than 1"
+				#take each of the file names that are returned
+				foreach ($txtfile in $histtxt) {
+					#show the file name that is being returned each loop
+					#"the file name in current loop is $txtfile"
+					#set the path for the current file
+					$currentFilePath = $histPath + "\" + $txtfile
+					#show the path set for the current file
+					#$currentFilePath
+					#get the content of the current file
+					Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
+        
+				} 
+			}
+			#if there is just one file
+			else {
+				#set the file path
+				$currentFilePath = $histPath + "\" + $histtxt
+				#get the content from the file
+				Get-Content $currentFilePath | Where-Object { $_.trim() -ne "" } 
+			}
+
+		}
+ 
+		function systemTemp { 
+			write-host "systemTemp is running"
+			cmd /c "dir %TEMP% /b /s /a-d"  
+		}
+
+		function systemWinTemp { 
+			write-host "systemWinTemp is running"
+			cmd /c "dir C:\Windows\Temp /b /s /a-d"  
+		}
+ 
+
+		#used for json output. removed formatting to use properties
+		function systemLogicalDiskJson {
+			write-host "systemLogicalDisk is running"
+
+			$gbFreeSpace = @{Name = "Free Space (GB)"; Expression = { [math]::round($_.freespace / 1GB, 2) } }
+
+			$gbSize = @{Name = "Size (GB)"; Expression = { [math]::round($_.size / 1GB, 2) } }
+
+			$DriveType = @{
+				Name       = 'DriveType'
+				Expression = {
+					# property is an array, so process all values
+					$value = $_.DriveType
+    
+					switch ([int]$value) {
+						0 { 'Unknown' }
+						1 { 'No Root Directory' }
+						2 { 'Removable Disk' }
+						3 { 'Local Disk' }
+						4 { 'Network Drive' }
+						5 { 'Compact Disc' }
+						6 { 'RAM Disk' }
+						default { "$value" }
+					}
+      
+				}  
+			}
+
+			Get-CimInstance Win32_LogicalDisk | 
+			Select-Object DeviceID, $gbFreeSpace, $gbSize, FileSystem, VolumeName, $DriveType
+		}
+
+		#get the system scheduled tasks
+		function systemScheduledTasksJson {
+			write-host "systemScheduledTasks is running"
+			Get-ScheduledTask  |
+			Select-Object -Property TaskName, State -ExpandProperty Actions |
+			select-object @{label = "Task"; expression = { $_.TaskName } },
+			@{label = "State"; expression = { $_.State } },
+			@{label = "Execute file"; expression = { $_.Execute } } | 
+			Sort-Object State
+		}
+
+		#### end function section ####
+
 		#get the date and time for the results, format in way that the ELK stack requires
 		$timestamp = (get-date -format "yyyy-MM-dd hh:mm:ss").tostring()
 		#add the opening to start the results
-		[void]$results.Add("{")
+		[void]$ndjsonresults.Add("{")
 		#start the results with the ip of the system. This will be our unique key
-		[void]$results.add("`"ip`' : $ip")
+		[void]$ndjsonresults.add("`"ip`' : $ip")
 		#add the timestamp to the results. This is required for import to the ELK stack
-		[void]$results.add("`"timestamp`" : $timestamp")
+		[void]$ndjsonresults.add("`"timestamp`" : $timestamp")
 		#set a temporary array to compile the data for each function
 		[System.Collections.ArrayList]$tempArray = @()
 
 		#### start system info section
 		#put all the properties available in a variable
-		$systemInfoProperties = ($systemInformation | Get-Member | Where-Object { $_.MemberType -ne "Method" }).Name
+		$systemInfoProperties = ($systemInformation | Where-Object { $_.MemberType -ne "Method" }).Name
 		#get the system information from the function. Using csv so can link the header with the value
 		$systemInformation = ConvertFrom-Csv -Delimiter "," -InputObject (systemInformationJson)
 		#take each property 		
@@ -65,7 +239,7 @@
 			#expand the property to get the value
 			$sysInfoPropertyValue = $systemInformation | Select-Object -ExpandProperty $sysProperty
 			#add the property name and the property value to the results array
-			$results.Add("`"$sysProperty`" : `"$sysInfoPropertyValue`"")
+			[void]$ndjsonresults.Add("`"$sysProperty`" : `"$sysInfoPropertyValue`"")
 		}
 
 		#### start the local users section ####
@@ -102,7 +276,7 @@
 			#it will end with the closing square bracket.
 		}
 		#add the results of the local users to the results array as a single line, type string
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -136,7 +310,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 		
@@ -171,7 +345,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -208,7 +382,7 @@
 			#add the header for the temp array
 			if ($currentIndex -eq $indexVal) {
 				#add the header 
-				$tempArray.Add("`"Netstat connections`" : [")
+				[void]$tempArray.Add("`"Netstat connections`" : [")
 			}
 			#"the value is not equal"
 			$temp1 = $netstatData[$indexVal]
@@ -216,7 +390,7 @@
 			$currentProcId = ($netstatData[$currentIndex] -split " ")[-1]
 			#set the process name from the process id
 			$temp2 = (Get-Process -id $currentProcId).Name
-			$tempArray.Add("{`"$temp1        $temp2`"}")
+			[void]$tempArray.Add("{`"$temp1        $temp2`"}")
 			$currentIndex++
 
 			if ($currentIndex -lt $netstatIndexLength) {
@@ -235,7 +409,7 @@
 			#it will end with the closing square bracket.
 		}
 		#add the results of the local users to the results array as a single line, type string
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -273,7 +447,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -310,7 +484,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -343,7 +517,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -375,7 +549,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -407,7 +581,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -445,7 +619,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -482,7 +656,7 @@
 			}
 		}
 		#add the results to the results array
-		[void]$results.Add(($tempArray -join "").ToString())
+		[void]$ndjsonresults.Add(($tempArray -join "").ToString())
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
@@ -496,7 +670,7 @@
 
 
 	end {
-		return $results
+		return $ndjsonresults
 	}
 }
 
