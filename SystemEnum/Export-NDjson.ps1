@@ -34,6 +34,7 @@
 		[System.Collections.ArrayList]$ndjsonresults = @()
 		#set a temporary array to compile the data for each function
 		[System.Collections.ArrayList]$tempArray = @()
+		$systemPSversion = ($PSVersionTable.PSVersion.Major | Out-String).trim()
 	}
 
 	process {
@@ -74,7 +75,6 @@
 
 				}
 
-
 				foreach ($v in $localWmicOut) {
 					$line = $v.Split(" ")
 					$typeTest = if ($line[2].split("=")[1] -eq "TRUE") { "Local" }
@@ -89,7 +89,6 @@
 
 		function systemLocalGroups {
 			write-host "systemlocalgroups is running"
-			#$PSversionG = ((Get-Host).Version).Major
 			if ($systemPSversion -gt 2) {
 				$LocalGroup = (Get-LocalGroup).Name
 				$LocalGroup | ForEach-Object {
@@ -117,8 +116,6 @@
 			systeminfo -fo:csv
 		}
         
-
- 
 		function systemProcessJson { 
 			write-host "systemProcess is running"
 			Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine 
@@ -223,7 +220,7 @@
 		#add the opening to start the results
 		[void]$ndjsonresults.Add("{")
 		#start the results with the ip of the system. This will be our unique key
-		[void]$ndjsonresults.add("`"ip`' : $ip")
+		[void]$ndjsonresults.add("`"ip`" : $ip")
 		#add the timestamp to the results. This is required for import to the ELK stack
 		[void]$ndjsonresults.add("`"timestamp`" : $timestamp")
 		#set a temporary array to compile the data for each function
@@ -653,6 +650,8 @@
 			#if there are no tasks left to add, insert the close group bracket
 			if ($systemScheduledTasksDataCount -eq 0) {
 				[void]$tempArray.Add("]")
+				#add the closing bracket
+				[void]$tempArray.Add("}")
 			}
 		}
 		#add the results to the results array
@@ -660,6 +659,13 @@
 		#clear the tempArray
 		[void]$tempArray.Clear()
 
+
+		#join to a single line for the ndjson output
+		[void]$tempArray.Add(($ndjsonresults -join ",").ToString())
+		#clear the output array
+		[void]$ndjsonresults.Clear()
+		#add the results, remove the first (not required) comma
+		[void]$ndjsonresults.Add(($tempArray -replace "^{,", "{"))
 
 		#### FUTURE DEV ####
 		#Have not yet added net sessions or route print

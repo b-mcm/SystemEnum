@@ -127,7 +127,7 @@
             $choices = ($choices.trim(" ")).split(",")
             #create a temporary list of all possible choice (index) values.
             #This will be the list of index values. Minus 1, index starts at 0.
-            $allOptChoiceNums = 0..($allOptions.Length - 1) | foreach { $_ }
+            $allOptChoiceNums = 0..($allOptions.Length - 1) | ForEach-Object { $_ }
             #Compare the full list to the user options. Only return values from the full list that are not in the 
             #user choices. Output of compare is a table, only want the values of inputObject property and no header 
             $choices = (Compare-Object $allOptChoiceNums $choices).inputObject

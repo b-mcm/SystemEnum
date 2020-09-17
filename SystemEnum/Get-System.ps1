@@ -61,7 +61,7 @@
             write-host "systemlocaluser is running"
               
             if ($systemPSversion -gt 2) {
-                Get-LocalUser | Where { $_.Enabled -eq $true } | 
+                Get-LocalUser | Where-Object { $_.Enabled -eq $true } | 
                 Select-Object @{label = "ip"; expression = { $ip } }, Name, 
                 @{label = "Enabled?"; expression = { 
                         if ($_.Enabled -eq $true) { "Enabled" }
@@ -74,7 +74,7 @@
     
             if ($systemPSversion -le 2) {
             
-                $systemLocalUserWmic = wmic useraccount get Name, Domain, LocalAccount, Status -format:list | where { $_ -ne "" }
+                $systemLocalUserWmic = wmic useraccount get Name, Domain, LocalAccount, Status -format:list | Where-Object { $_ -ne "" }
             
                 $i = 0
                 $length = $systemLocalUserWmic.Count
@@ -96,7 +96,7 @@
                     $line = $v.Split(" ")
                     $typeTest = if ($line[2].split("=")[1] -eq "TRUE") { "Local" }
                     else { "Other account" } 
-                    $v | select @{Label = "Name"; Expression = { $v.Split(" ")[0] } },
+                    $v | Select-Object @{Label = "Name"; Expression = { $v.Split(" ")[0] } },
                     @{Label = "Domain"; Expression = { $line[1] } },
                     @{Label = "AccountType"; Expression = { $typeTest } },
                     @{Label = "Status"; Expression = { $line[3] } }
@@ -109,7 +109,7 @@
             #$PSversionG = ((Get-Host).Version).Major
             if ($systemPSversion -gt 2) {
                 $LocalGroup = (Get-LocalGroup).Name
-                $LocalGroup | % {
+                $LocalGroup | ForEach-Object {
                     Get-LocalGroupMember -Group $_
                 } 
             }
@@ -171,7 +171,7 @@
  
         function systemProcess { 
             write-host "systemProcess is running"
-            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | ft -AutoSize -Wrap  
+            Get-WmiObject Win32_Process | Select-Object Name, ProcessId, ParentProcessId, CommandLine | Format-Table -AutoSize -Wrap  
         }
 
         #used for json output 
@@ -471,7 +471,7 @@
     }
     #The END block also runs once, after every item in the collection has been processes
     END {
-    return $outputNDJson
+        return $outputNDJson
     }
 }
 

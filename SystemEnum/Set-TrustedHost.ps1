@@ -39,9 +39,9 @@
 	[System.Collections.ArrayList]$newList = @()
 
 	#check if ips are in trusted host file
-	foreach ($ip in $ipList){
+	foreach ($ip in $ipList) {
 		#if the ip is not in the trusted host list
-		if($currentTrustedHosts -notcontains $ip) {
+		if ($currentTrustedHosts -notcontains $ip) {
 			#add the ip to a list
 			$newList.add($ip) > $null
 		}
