@@ -43,6 +43,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" />
     <None Include="Start-Debug.ps1" />
     <Content Include="SystemEnum\Get-LinuxSystem.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
