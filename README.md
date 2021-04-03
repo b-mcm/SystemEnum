@@ -26,7 +26,7 @@ Get-System is used to enumerate the system, with the given ip(s) and the given o
 
 ## Set up
 Run the scripts from the same folder, as you will use them to make variables. 
-1. Download the scripts (ps1) files to the same directory
+1. Download the scripts (ps1) files to the same directory 
 2. Run the scripts to load the functions. This requires elevated privileges for some parts of the scripts
 
 * The scripts can be used for either a local or remote machines, for a single or multiple.
